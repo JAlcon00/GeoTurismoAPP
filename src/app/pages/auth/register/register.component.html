@@ -1,0 +1,82 @@
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg w-full max-w-md p-8">
+    <div class="text-center mb-8">
+      <div class="text-4xl mb-2">🗺️</div>
+      <h1 class="text-2xl font-bold text-gray-800">GeoTurismo</h1>
+      <p class="text-gray-500 text-sm mt-1">Crea tu cuenta</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
+        <input
+          type="text"
+          formControlName="name"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Juan Pérez"
+        />
+        @if (form.get('name')?.invalid && form.get('name')?.touched) {
+          <p class="text-red-500 text-xs mt-1">El nombre debe tener al menos 2 caracteres</p>
+        }
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
+        <input
+          type="email"
+          formControlName="email"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="usuario@ejemplo.com"
+        />
+        @if (form.get('email')?.invalid && form.get('email')?.touched) {
+          <p class="text-red-500 text-xs mt-1">Ingresa un correo válido</p>
+        }
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+        <input
+          type="password"
+          formControlName="password"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Mínimo 6 caracteres"
+        />
+        @if (form.get('password')?.invalid && form.get('password')?.touched) {
+          <p class="text-red-500 text-xs mt-1">La contraseña debe tener al menos 6 caracteres</p>
+        }
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
+        <input
+          type="password"
+          formControlName="confirmPassword"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Repite tu contraseña"
+        />
+        @if (form.errors?.['mismatch'] && form.get('confirmPassword')?.touched) {
+          <p class="text-red-500 text-xs mt-1">Las contraseñas no coinciden</p>
+        }
+      </div>
+
+      @if (errorMsg) {
+        <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
+          {{ errorMsg }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        [disabled]="loading || form.invalid"
+        class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2 rounded-lg transition-colors text-sm"
+      >
+        {{ loading ? 'Registrando...' : 'Crear cuenta' }}
+      </button>
+    </form>
+
+    <p class="text-center text-sm text-gray-500 mt-6">
+      ¿Ya tienes cuenta?
+      <a routerLink="/auth/login" class="text-blue-600 hover:underline font-medium">Inicia sesión</a>
+    </p>
+  </div>
+</div>

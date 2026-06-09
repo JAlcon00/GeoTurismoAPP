@@ -1,0 +1,40 @@
+# Dependencias
+/node_modules
+
+# Build
+/dist
+/tmp
+/out-tsc
+/.angular/cache
+
+# Variables de entorno (contiene credenciales — nunca subir)
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-error.log
+
+# Cypress
+/cypress/videos
+/cypress/screenshots
+
+# IDEs
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Misceláneos
+.sass-cache/
+/coverage
+/connect.lock
+testem.log
