@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { LocationService } from '../../core/services/location.service';
 import { ZoneService } from '../../core/services/zone.service';
 import { CategoryService } from '../../core/services/category.service';
+import { ReviewService } from '../../core/services/review.service';
 import { Location, Category } from '../../shared/models/location.model';
 import { Zone } from '../../shared/models/zone.model';
 import { Subscription } from 'rxjs';
@@ -35,6 +36,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   locations: Location[] = [];
   categories: Category[] = [];
+  zones: Zone[] = [];
+  activePanel: 'locations' | 'zones' | 'routes' = 'locations';
   searchQuery = '';
   showModal = signal(false);
   editingLocation = signal<Location | null>(null);
@@ -42,15 +45,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
   errorMsg = '';
   successMsg = '';
 
+  panelOpen = signal(true);
+  togglePanel(): void { this.panelOpen.update((v) => !v); }
+  drawMode = signal(false);
+  showZoneModal = signal(false);
+  drawPointCount = signal(0);
+  showReviewModal = signal(false);
+  reviewingTarget = signal<{ _id: string; name: string } | null>(null);
+  reviewTargetType = signal<'location' | 'zone'>('location');
+  readonly starRange = [1, 2, 3, 4, 5];
+  private drawPoints: L.LatLng[] = [];
+  private drawPreview: L.Polyline | null = null;
+  private waypoints: L.LatLng[] = [];
+  private waypointDots: L.CircleMarker[] = [];
+  private isRouting = false;
+
   private locationService = inject(LocationService);
   private zoneService = inject(ZoneService);
   private categoryService = inject(CategoryService);
+  private reviewService = inject(ReviewService);
   private fb = inject(FormBuilder);
+  private zone = inject(NgZone);
 
   locationForm = this.fb.group({
     name: ['', Validators.required],
     description: [''],
     category: [''],
+  });
+
+  zoneForm = this.fb.group({
+    name: ['', Validators.required],
+    type: ['polygon'],
+  });
+
+  reviewForm = this.fb.group({
+    rating: [5, [Validators.required, Validators.min(1), Validators.max(5)]],
+    comment: [''],
   });
 
   private sub!: Subscription;
@@ -67,6 +97,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearDrawLayers();
     this.sub?.unsubscribe();
     this.map?.remove();
   }
@@ -80,8 +111,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.zoneLayerGroup.addTo(this.map);
 
-    // Clic en el mapa → abre modal para crear marcador
+    // Click: agrega waypoint con routing OSRM, o abre modal de ubicación
     this.map.on('click', (e: L.LeafletMouseEvent) => {
+      if (this.drawMode()) {
+        if (!this.isRouting) { this.addWaypoint(e.latlng); }
+        return;
+      }
       this.pendingLatLng = [e.latlng.lat, e.latlng.lng];
       this.locationForm.reset();
       this.editingLocation.set(null);
@@ -114,6 +149,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private loadZones(): void {
     this.zoneService.getAll().subscribe((res) => {
+      this.zones = res.data;
       res.data.forEach((zone) => this.renderZone(zone));
     });
   }
@@ -190,6 +226,144 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ── Dibujo de zonas (routing OSRM) ──────────────────────────────────────
+
+  startDraw(): void {
+    this.clearDrawLayers();
+    this.drawMode.set(true);
+    this.showModal.set(false);
+    this.map.getContainer().style.cursor = 'crosshair';
+    this.map.doubleClickZoom.disable();
+  }
+
+  cancelDraw(): void {
+    this.clearDrawLayers();
+    this.drawMode.set(false);
+    this.map.getContainer().style.cursor = '';
+    this.map.doubleClickZoom.enable();
+  }
+
+  openZoneModal(): void {
+    if (this.waypoints.length < 2) {
+      this.errorMsg = 'Agrega al menos 2 puntos en el mapa';
+      setTimeout(() => (this.errorMsg = ''), 3000);
+      return;
+    }
+    this.drawPointCount.set(this.drawPoints.length);
+    this.zoneForm.reset({ name: '', type: 'polygon' });
+    this.showZoneModal.set(true);
+  }
+
+  closeZoneModal(): void {
+    this.showZoneModal.set(false);
+  }
+
+  saveZone(): void {
+    if (this.zoneForm.invalid) return;
+    const { name, type } = this.zoneForm.value;
+    const coordinates: [number, number][] = this.drawPoints.map((ll) => [ll.lat, ll.lng]);
+    this.zoneService.create({ name: name!, type: type as 'polygon' | 'polyline', coordinates }).subscribe({
+      next: (res) => {
+        this.zones = [...this.zones, res.data];
+        this.renderZone(res.data);
+        this.clearDrawLayers();
+        this.drawMode.set(false);
+        this.showZoneModal.set(false);
+        this.map.getContainer().style.cursor = '';
+        this.map.doubleClickZoom.enable();
+        this.activePanel = res.data.type === 'polygon' ? 'zones' : 'routes';
+        this.showSuccess('Zona guardada');
+      },
+      error: (err) => (this.errorMsg = err.error?.message ?? 'Error al guardar zona'),
+    });
+  }
+
+  private addWaypoint(latlng: L.LatLng): void {
+    const idx = this.waypoints.length;
+
+    // Dot visual: verde para el primero, ámbar para los siguientes
+    const dot = L.circleMarker(latlng, {
+      radius: idx === 0 ? 8 : 6,
+      color: idx === 0 ? '#10b981' : '#f59e0b',
+      fillColor: idx === 0 ? '#10b981' : '#f59e0b',
+      fillOpacity: 1,
+      weight: 2,
+      interactive: false,
+    }).addTo(this.map);
+    this.waypointDots.push(dot);
+
+    if (idx === 0) {
+      // Primer punto: solo guardarlo
+      this.drawPoints.push(latlng);
+      this.waypoints.push(latlng);
+      this.drawPointCount.set(1);
+    } else {
+      // Puntos siguientes: buscar ruta OSRM desde el anterior
+      const prev = this.waypoints[idx - 1];
+      this.waypoints.push(latlng);
+      this.isRouting = true;
+      this.fetchOsrmRoute(prev, latlng).then((routePoints) => {
+        this.zone.run(() => {
+          routePoints.forEach((pt) => this.drawPoints.push(pt));
+          this.drawPointCount.set(this.waypoints.length);
+          this.updateDrawPreview();
+          this.isRouting = false;
+        });
+      });
+    }
+  }
+
+  private async fetchOsrmRoute(from: L.LatLng, to: L.LatLng): Promise<L.LatLng[]> {
+    try {
+      const url =
+        `https://router.project-osrm.org/route/v1/driving/` +
+        `${from.lng},${from.lat};${to.lng},${to.lat}` +
+        `?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const coords: [number, number][] = data?.routes?.[0]?.geometry?.coordinates;
+      if (Array.isArray(coords)) {
+        return coords.map(([lng, lat]) => L.latLng(lat, lng));
+      }
+    } catch {
+      // OSRM no disponible — línea recta de respaldo
+    }
+    return [from, to];
+  }
+
+  private updateDrawPreview(): void {
+    this.drawPreview?.remove();
+    if (this.drawPoints.length < 2) return;
+    this.drawPreview = L.polyline(this.drawPoints, {
+      color: '#f59e0b', weight: 3, interactive: false,
+    }).addTo(this.map);
+  }
+
+  private clearDrawLayers(): void {
+    this.drawPreview?.remove();
+    this.drawPreview = null;
+    this.waypointDots.forEach((d) => d.remove());
+    this.waypointDots = [];
+    this.drawPoints = [];
+    this.waypoints = [];
+    this.isRouting = false;
+    this.drawPointCount.set(0);
+  }
+
+  get polygonZones(): Zone[] { return this.zones.filter((z) => z.type === 'polygon'); }
+  get polylineZones(): Zone[] { return this.zones.filter((z) => z.type === 'polyline'); }
+
+  focusLocation(loc: Location): void {
+    this.map.flyTo([loc.latitude, loc.longitude], 17, { duration: 0.8 });
+    setTimeout(() => this.markers.get(loc._id)?.openPopup(), 900);
+  }
+
+  focusZone(zone: Zone): void {
+    if (!zone.coordinates.length) return;
+    const bounds = L.latLngBounds(zone.coordinates.map(([lat, lng]) => L.latLng(lat, lng)));
+    this.map.flyToBounds(bounds, { padding: [50, 50], maxZoom: 17, duration: 0.8 });
+  }
+
   openEditModal(loc: Location): void {
     this.editingLocation.set(loc);
     this.pendingLatLng = null;
@@ -243,11 +417,62 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ── Reseñas ──────────────────────────────────────────────────────────────
+
+  openReviewModal(target: { _id: string; name: string }, type: 'location' | 'zone'): void {
+    this.reviewingTarget.set(target);
+    this.reviewTargetType.set(type);
+    this.reviewForm.reset({ rating: 5, comment: '' });
+    this.showReviewModal.set(true);
+  }
+
+  closeReviewModal(): void {
+    this.showReviewModal.set(false);
+    this.reviewingTarget.set(null);
+  }
+
+  setReviewRating(n: number): void {
+    this.reviewForm.patchValue({ rating: n });
+  }
+
+  saveReview(): void {
+    if (this.reviewForm.invalid) return;
+    const target = this.reviewingTarget();
+    if (!target) return;
+    const { rating, comment } = this.reviewForm.value;
+    const type = this.reviewTargetType();
+    const payload = type === 'location'
+      ? { location: target._id, rating: rating!, comment: comment ?? '' }
+      : { zone:     target._id, rating: rating!, comment: comment ?? '' };
+    this.reviewService.create(payload).subscribe({
+      next: () => {
+        this.closeReviewModal();
+        this.showSuccess('Reseña agregada');
+      },
+      error: (err) => (this.errorMsg = err.error?.message ?? 'Error al guardar reseña'),
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   deleteLocation(id: string): void {
     if (!confirm('¿Eliminar esta ubicación?')) return;
     this.locationService.delete(id).subscribe({
       next: () => { this.map.closePopup(); this.showSuccess('Ubicación eliminada'); },
-      error: (err) => this.errorMsg = err.error?.message ?? 'Error al eliminar',
+      error: (err) => (this.errorMsg = err.error?.message ?? 'Error al eliminar'),
+    });
+  }
+
+  deleteZone(id: string): void {
+    if (!confirm('¿Eliminar esta zona del mapa?')) return;
+    this.zoneService.delete(id).subscribe({
+      next: () => {
+        this.zones = this.zones.filter((z) => z._id !== id);
+        this.zoneLayerGroup.clearLayers();
+        this.zones.forEach((z) => this.renderZone(z));
+        this.showSuccess('Zona eliminada');
+      },
+      error: (err) => (this.errorMsg = err.error?.message ?? 'Error al eliminar zona'),
     });
   }
 

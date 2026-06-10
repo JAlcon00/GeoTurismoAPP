@@ -15,14 +15,17 @@ export class ReviewService {
 
   constructor(private http: HttpClient) {}
 
-  loadAll(locationId?: string): Observable<ApiResponse<Review[]>> {
-    const params = locationId ? `?location=${locationId}` : '';
-    return this.http.get<ApiResponse<Review[]>>(`${this.apiUrl}${params}`).pipe(
+  loadAll(filter?: { location?: string; zone?: string }): Observable<ApiResponse<Review[]>> {
+    const params = new URLSearchParams();
+    if (filter?.location) params.set('location', filter.location);
+    if (filter?.zone)     params.set('zone',     filter.zone);
+    const qs = params.toString() ? `?${params}` : '';
+    return this.http.get<ApiResponse<Review[]>>(`${this.apiUrl}${qs}`).pipe(
       tap((res) => this.reviewsSubject.next(res.data))
     );
   }
 
-  create(data: { location: string; rating: number; comment?: string }): Observable<ApiResponse<Review>> {
+  create(data: { location?: string; zone?: string; rating: number; comment?: string }): Observable<ApiResponse<Review>> {
     return this.http.post<ApiResponse<Review>>(this.apiUrl, data).pipe(
       tap((res) => this.reviewsSubject.next([res.data, ...this.reviewsSubject.value]))
     );

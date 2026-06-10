@@ -1,107 +1,411 @@
 <app-navbar />
 
-<!-- Notificaciones toast -->
+<!-- Toast notifications -->
 @if (successMsg) {
-  <div class="fixed top-4 right-4 z-[9999] bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
-    ✓ {{ successMsg }}
+  <div class="fixed top-4 right-4 z-[9999] flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-xl text-sm" role="status">
+    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+    </svg>
+    {{ successMsg }}
   </div>
 }
 @if (errorMsg) {
-  <div class="fixed top-4 right-4 z-[9999] bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
-    ✗ {{ errorMsg }}
+  <div class="fixed top-4 right-4 z-[9999] flex items-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-xl shadow-xl text-sm" role="alert">
+    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+    </svg>
+    {{ errorMsg }}
   </div>
 }
 
-<!-- Barra de búsqueda -->
-<div class="bg-white border-b px-4 py-3 flex items-center gap-3 shadow-sm">
-  <input
-    type="text"
-    [(ngModel)]="searchQuery"
-    (input)="onSearch()"
-    placeholder="Buscar ubicación por nombre..."
-    class="flex-1 max-w-sm border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-  />
-  <span class="text-sm text-gray-500">{{ locations.length }} ubicaciones</span>
-  <span class="text-xs text-gray-400 hidden md:block">Haz clic en el mapa para agregar un punto</span>
-</div>
+<!-- Map stage -->
+<div class="relative h-[calc(100vh-56px)] overflow-hidden">
 
-<div class="flex flex-col lg:flex-row h-[calc(100vh-112px)]">
-  <!-- Mapa -->
-  <div id="map" class="flex-1 min-h-[400px] lg:min-h-0 z-0"></div>
+  <!-- Mapa Leaflet (full background) -->
+  <div id="map" class="absolute inset-0 z-0"
+       role="application" aria-label="Mapa interactivo de ubicaciones turísticas en León, Guanajuato"></div>
 
-  <!-- Tabla lateral -->
-  <div class="w-full lg:w-96 bg-white border-l overflow-y-auto">
-    <div class="p-4 border-b bg-gray-50">
-      <h2 class="font-semibold text-gray-700 text-sm">Tabla de ubicaciones</h2>
-    </div>
-    <table class="w-full text-xs">
-      <thead class="bg-gray-100 sticky top-0">
-        <tr>
-          <th class="text-left px-3 py-2 font-medium text-gray-600">Nombre</th>
-          <th class="text-left px-3 py-2 font-medium text-gray-600">Lat</th>
-          <th class="text-left px-3 py-2 font-medium text-gray-600">Lng</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (loc of locations; track loc._id) {
-          <tr class="border-t hover:bg-blue-50 cursor-pointer" (click)="openEditModal(loc)">
-            <td class="px-3 py-2">
-              <div class="font-medium text-gray-800">{{ loc.name }}</div>
-              <div class="text-gray-400 truncate max-w-[120px]">{{ loc.description }}</div>
-              @if (loc.category) {
-                <span class="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded mt-0.5 inline-block">
-                  {{ loc.category.icon }} {{ loc.category.name }}
-                </span>
-              }
-            </td>
-            <td class="px-3 py-2 text-gray-600">{{ loc.latitude | number:'1.4-4' }}</td>
-            <td class="px-3 py-2 text-gray-600">{{ loc.longitude | number:'1.4-4' }}</td>
-          </tr>
-        } @empty {
-          <tr>
-            <td colspan="3" class="px-3 py-8 text-center text-gray-400">
-              No hay ubicaciones.<br>Haz clic en el mapa para agregar una.
-            </td>
-          </tr>
+  <!-- ─── Panel flotante izquierdo ─── -->
+  <div class="absolute top-4 left-4 bottom-4 z-[400] flex items-start gap-2 pointer-events-none">
+
+    <!-- Collapsible inner -->
+    <div class="flex flex-col h-full gap-2.5 overflow-hidden transition-all duration-300 ease-in-out"
+         [class.w-80]="panelOpen()"
+         [class.w-0]="!panelOpen()"
+         [class.opacity-100]="panelOpen()"
+         [class.opacity-0]="!panelOpen()"
+         [class.pointer-events-none]="!panelOpen()">
+
+    <!-- Buscador -->
+    <div class="w-80 bg-white/75 backdrop-blur-xl rounded-2xl shadow-2xl ring-1 ring-white/60 pointer-events-auto">
+      <div class="flex items-center gap-3 px-4 py-3">
+        <svg class="w-4 h-4 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+        </svg>
+        <input type="search" [(ngModel)]="searchQuery" (input)="onSearch()"
+          placeholder="Buscar lugares..."
+          aria-label="Buscar ubicación"
+          class="flex-1 text-sm text-slate-900 placeholder-slate-400 bg-transparent outline-none"/>
+        @if (searchQuery) {
+          <button (click)="searchQuery = ''; onSearch()"
+            class="text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Limpiar búsqueda">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+            </svg>
+          </button>
         }
-      </tbody>
-    </table>
+      </div>
+    </div>
+
+    <!-- Panel con tabs -->
+    <div class="w-80 bg-white/75 backdrop-blur-xl rounded-2xl shadow-2xl ring-1 ring-white/60 flex-1 overflow-hidden flex flex-col pointer-events-auto">
+
+      <!-- Tab bar -->
+      <div class="flex items-stretch px-2 pt-2 border-b border-slate-100 shrink-0" role="tablist">
+
+        <button role="tab" [attr.aria-selected]="activePanel === 'locations'"
+          (click)="activePanel = 'locations'"
+          class="flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors -mb-px rounded-t-lg"
+          [class.text-slate-900]="activePanel === 'locations'"
+          [class.border-b-2]="activePanel === 'locations'"
+          [class.border-slate-900]="activePanel === 'locations'"
+          [class.text-slate-400]="activePanel !== 'locations'"
+          [class.hover:text-slate-700]="activePanel !== 'locations'">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+          </svg>
+          Lugares
+          <span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full text-[10px] font-semibold tabular-nums">{{ locations.length }}</span>
+        </button>
+
+        <button role="tab" [attr.aria-selected]="activePanel === 'zones'"
+          (click)="activePanel = 'zones'"
+          class="flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors -mb-px rounded-t-lg"
+          [class.text-slate-900]="activePanel === 'zones'"
+          [class.border-b-2]="activePanel === 'zones'"
+          [class.border-slate-900]="activePanel === 'zones'"
+          [class.text-slate-400]="activePanel !== 'zones'"
+          [class.hover:text-slate-700]="activePanel !== 'zones'">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z"/>
+          </svg>
+          Zonas
+          <span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full text-[10px] font-semibold tabular-nums">{{ polygonZones.length }}</span>
+        </button>
+
+        <button role="tab" [attr.aria-selected]="activePanel === 'routes'"
+          (click)="activePanel = 'routes'"
+          class="flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors -mb-px rounded-t-lg"
+          [class.text-slate-900]="activePanel === 'routes'"
+          [class.border-b-2]="activePanel === 'routes'"
+          [class.border-slate-900]="activePanel === 'routes'"
+          [class.text-slate-400]="activePanel !== 'routes'"
+          [class.hover:text-slate-700]="activePanel !== 'routes'">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"/>
+          </svg>
+          Rutas
+          <span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full text-[10px] font-semibold tabular-nums">{{ polylineZones.length }}</span>
+        </button>
+
+      </div>
+
+      <!-- Contenido scrollable -->
+      <div class="flex-1 overflow-y-auto overscroll-contain" role="tabpanel">
+
+        <!-- Tab: Lugares -->
+        @if (activePanel === 'locations') {
+          @if (locations.length === 0) {
+            <div class="flex flex-col items-center justify-center py-14 px-6 text-center">
+              <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+                <svg class="w-6 h-6 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                </svg>
+              </div>
+              <p class="text-sm font-medium text-slate-500">Sin ubicaciones</p>
+              <p class="text-xs text-slate-400 mt-1">Haz clic en el mapa para agregar</p>
+            </div>
+          }
+          @for (loc of locations; track loc._id) {
+            <div class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group cursor-pointer"
+              (click)="focusLocation(loc)"
+              role="button" tabindex="0"
+              [attr.aria-label]="'Ver ' + loc.name + ' en el mapa'"
+              (keydown.enter)="focusLocation(loc)">
+
+              <!-- Category icon tile -->
+              <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 group-hover:bg-slate-200 transition-colors text-lg shrink-0 mt-0.5 select-none">
+                @if (loc.category?.icon) {
+                  {{ loc.category!.icon }}
+                } @else {
+                  <svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                  </svg>
+                }
+              </div>
+
+              <div class="flex-1 min-w-0 py-0.5">
+                <p class="font-medium text-sm text-slate-900 truncate leading-tight">{{ loc.name }}</p>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                  @if (loc.category?.name) {
+                    <span class="text-[11px] text-slate-500 truncate max-w-[90px]">{{ loc.category!.name }}</span>
+                    <span class="text-slate-200 text-[10px]">·</span>
+                  }
+                  <span class="text-[11px] text-slate-400 font-mono shrink-0">{{ loc.latitude | number:'1.3-3' }}°N</span>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5">
+                <button (click)="$event.stopPropagation(); openReviewModal(loc, 'location')"
+                  class="p-1.5 rounded-lg hover:bg-amber-50 text-slate-400 hover:text-amber-500 transition-colors"
+                  [attr.aria-label]="'Agregar reseña a ' + loc.name">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/>
+                  </svg>
+                </button>
+                <button (click)="$event.stopPropagation(); openEditModal(loc)"
+                  class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors"
+                  [attr.aria-label]="'Editar ' + loc.name">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
+                  </svg>
+                </button>
+                <button (click)="$event.stopPropagation(); deleteLocation(loc._id)"
+                  class="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                  [attr.aria-label]="'Eliminar ' + loc.name">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          }
+        }
+
+        <!-- Tab: Zonas (polígonos) -->
+        @if (activePanel === 'zones') {
+          @if (polygonZones.length === 0) {
+            <div class="flex flex-col items-center justify-center py-14 px-6 text-center">
+              <div class="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-3">
+                <svg class="w-6 h-6 text-blue-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z"/>
+                </svg>
+              </div>
+              <p class="text-sm font-medium text-slate-500">Sin zonas</p>
+              <p class="text-xs text-slate-400 mt-1">Dibuja un polígono y selecciona «Polígono» al guardar</p>
+            </div>
+          }
+          @for (zone of polygonZones; track zone._id) {
+            <div class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group cursor-pointer"
+              (click)="focusZone(zone)"
+              role="button" tabindex="0"
+              [attr.aria-label]="'Ver zona ' + zone.name + ' en el mapa'"
+              (keydown.enter)="focusZone(zone)">
+
+              <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-blue-50 group-hover:bg-blue-100 transition-colors shrink-0 mt-0.5">
+                <svg class="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z"/>
+                </svg>
+              </div>
+
+              <div class="flex-1 min-w-0 py-0.5">
+                <p class="font-medium text-sm text-slate-900 truncate leading-tight">{{ zone.name }}</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">Polígono · {{ zone.coordinates.length }} puntos</p>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5">
+                <button (click)="$event.stopPropagation(); openReviewModal(zone, 'zone')"
+                  class="p-1.5 rounded-lg hover:bg-amber-50 text-slate-400 hover:text-amber-500 transition-colors"
+                  [attr.aria-label]="'Agregar reseña a ' + zone.name">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/>
+                  </svg>
+                </button>
+                <button (click)="$event.stopPropagation(); focusZone(zone)"
+                  class="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-500 transition-colors"
+                  [attr.aria-label]="'Ver ' + zone.name + ' en el mapa'">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                  </svg>
+                </button>
+                <button (click)="$event.stopPropagation(); deleteZone(zone._id)"
+                  class="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                  [attr.aria-label]="'Eliminar zona ' + zone.name">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          }
+        }
+
+        <!-- Tab: Rutas (polylines) -->
+        @if (activePanel === 'routes') {
+          @if (polylineZones.length === 0) {
+            <div class="flex flex-col items-center justify-center py-14 px-6 text-center">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mb-3">
+                <svg class="w-6 h-6 text-emerald-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"/>
+                </svg>
+              </div>
+              <p class="text-sm font-medium text-slate-500">Sin rutas</p>
+              <p class="text-xs text-slate-400 mt-1">Haz clic en «Dibujar» y añade waypoints en el mapa</p>
+            </div>
+          }
+          @for (zone of polylineZones; track zone._id) {
+            <div class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group cursor-pointer"
+              (click)="focusZone(zone)"
+              role="button" tabindex="0"
+              [attr.aria-label]="'Ver ruta ' + zone.name + ' en el mapa'"
+              (keydown.enter)="focusZone(zone)">
+
+              <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-50 group-hover:bg-emerald-100 transition-colors shrink-0 mt-0.5">
+                <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"/>
+                </svg>
+              </div>
+
+              <div class="flex-1 min-w-0 py-0.5">
+                <p class="font-medium text-sm text-slate-900 truncate leading-tight">{{ zone.name }}</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">Ruta · {{ zone.coordinates.length }} puntos</p>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5">
+                <button (click)="$event.stopPropagation(); openReviewModal(zone, 'zone')"
+                  class="p-1.5 rounded-lg hover:bg-amber-50 text-slate-400 hover:text-amber-500 transition-colors"
+                  [attr.aria-label]="'Agregar reseña a ruta ' + zone.name">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/>
+                  </svg>
+                </button>
+                <button (click)="$event.stopPropagation(); focusZone(zone)"
+                  class="p-1.5 rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-500 transition-colors"
+                  [attr.aria-label]="'Ver ruta ' + zone.name + ' en el mapa'">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                  </svg>
+                </button>
+                <button (click)="$event.stopPropagation(); deleteZone(zone._id)"
+                  class="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                  [attr.aria-label]="'Eliminar ruta ' + zone.name">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          }
+        }
+
+      </div>
+    </div>
+    </div><!-- /collapsible -->
+
+    <!-- Botón toggle -->
+    <button (click)="togglePanel()"
+      class="pointer-events-auto mt-2 w-8 h-8 flex items-center justify-center rounded-full bg-white/75 backdrop-blur-xl shadow-xl ring-1 ring-white/60 hover:bg-white/95 transition-all shrink-0"
+      [attr.aria-label]="panelOpen() ? 'Contraer panel' : 'Expandir panel'">
+      <svg class="w-4 h-4 text-slate-500 transition-transform duration-300"
+           [class.-rotate-180]="!panelOpen()"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </button>
   </div>
+
+  <!-- FAB: Dibujar zona/ruta -->
+  @if (!drawMode()) {
+    <button (click)="startDraw()"
+      class="absolute bottom-6 right-6 z-[400] flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white text-sm font-medium pl-4 pr-5 py-3 rounded-full shadow-2xl ring-1 ring-black/10 transition-colors"
+      aria-label="Activar modo de dibujo de zona o ruta">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
+      </svg>
+      Dibujar
+    </button>
+  }
+
+  <!-- Draw mode: banner superior -->
+  @if (drawMode()) {
+    <div class="absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-amber-50/90 backdrop-blur-md border border-amber-200/60 text-amber-800 text-xs font-medium px-5 py-2.5 rounded-full shadow-lg pointer-events-none"
+         role="status" aria-live="polite">
+      @if (drawPointCount() === 0) { Haz clic en el mapa para añadir el primer punto }
+      @else { {{ drawPointCount() }} waypoint{{ drawPointCount() !== 1 ? 's' : '' }} · haz clic para continuar trazando la ruta }
+    </div>
+
+    <!-- Controles flotantes inferiores -->
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-1 bg-white/80 backdrop-blur-xl shadow-2xl ring-1 ring-white/60 rounded-2xl px-2 py-2">
+      <button (click)="openZoneModal()"
+        class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors"
+        aria-label="Finalizar dibujo y guardar">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+        </svg>
+        Finalizar
+      </button>
+      <div class="w-px h-6 bg-slate-100 mx-1"></div>
+      <button (click)="cancelDraw()"
+        class="flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm font-medium px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors"
+        aria-label="Cancelar dibujo">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+        </svg>
+        Cancelar
+      </button>
+    </div>
+  }
+
 </div>
 
 <!-- Modal crear/editar ubicación -->
 @if (showModal()) {
-  <div class="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-      <h2 class="font-bold text-lg text-gray-800 mb-4">
-        {{ editingLocation() ? 'Editar ubicación' : 'Nueva ubicación' }}
-      </h2>
+  <div class="fixed inset-0 z-[1000] bg-black/20 backdrop-blur-md flex items-center justify-center p-4"
+       role="dialog" aria-modal="true" [attr.aria-label]="editingLocation() ? 'Editar ubicación' : 'Nueva ubicación'">
+    <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-sm p-6">
 
-      <form [formGroup]="locationForm" (ngSubmit)="saveLocation()" class="space-y-3">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-          <input
-            type="text"
-            formControlName="name"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Nombre del lugar"
-          />
+      <div class="flex items-center gap-2.5 mb-5">
+        <div class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+          </svg>
         </div>
+        <h2 class="font-semibold text-base text-slate-900">
+          {{ editingLocation() ? 'Editar lugar' : 'Nuevo lugar' }}
+        </h2>
+      </div>
+
+      <form [formGroup]="locationForm" (ngSubmit)="saveLocation()" class="space-y-3.5">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-          <textarea
-            formControlName="description"
-            rows="2"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            placeholder="Descripción breve"
-          ></textarea>
+          <label for="loc-name" class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">
+            Nombre <span class="text-red-400" aria-hidden="true">*</span>
+          </label>
+          <input id="loc-name" type="text" formControlName="name"
+            class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent bg-slate-50 focus:bg-white transition-colors"
+            placeholder="Nombre del lugar" aria-required="true"/>
         </div>
+
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-          <select
-            formControlName="category"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-          >
+          <label for="loc-desc" class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Descripción</label>
+          <textarea id="loc-desc" formControlName="description" rows="2"
+            class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent bg-slate-50 focus:bg-white resize-none transition-colors"
+            placeholder="Breve descripción del lugar"></textarea>
+        </div>
+
+        <div>
+          <label for="loc-cat" class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Categoría</label>
+          <select id="loc-cat" formControlName="category"
+            class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent bg-slate-50 focus:bg-white transition-colors appearance-none">
             <option value="">Sin categoría</option>
             @for (cat of categories; track cat._id) {
               <option [value]="cat._id">{{ cat.icon }} {{ cat.name }}</option>
@@ -110,20 +414,180 @@
         </div>
 
         @if (errorMsg) {
-          <p class="text-red-500 text-xs">{{ errorMsg }}</p>
+          <p class="text-red-500 text-xs flex items-center gap-1.5" role="alert">
+            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+            </svg>
+            {{ errorMsg }}
+          </p>
         }
 
-        <div class="flex gap-2 pt-2">
-          <button
-            type="button"
-            (click)="closeModal()"
-            class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors"
-          >Cancelar</button>
-          <button
-            type="submit"
-            [disabled]="locationForm.invalid"
-            class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm transition-colors"
-          >Guardar</button>
+        <div class="flex gap-2 pt-0.5">
+          <button type="button" (click)="closeModal()"
+            class="flex-1 py-2.5 rounded-xl text-sm text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="locationForm.invalid"
+            class="flex-1 py-2.5 rounded-xl text-sm font-medium bg-slate-900 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Modal nueva reseña -->
+@if (showReviewModal()) {
+  <div class="fixed inset-0 z-[1000] bg-black/20 backdrop-blur-md flex items-center justify-center p-4"
+       role="dialog" aria-modal="true" aria-label="Agregar reseña">
+    <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-sm p-6">
+
+      <!-- Header -->
+      <div class="flex items-start gap-2.5 mb-5">
+        <div class="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center shrink-0 mt-0.5">
+          <svg class="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/>
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <h2 class="font-semibold text-base text-slate-900 leading-tight">Nueva reseña</h2>
+          <p class="text-xs text-slate-500 mt-0.5 truncate">{{ reviewingTarget()?.name }}</p>
+        </div>
+      </div>
+
+      <form [formGroup]="reviewForm" (ngSubmit)="saveReview()" class="space-y-4">
+
+        <!-- Estrellas -->
+        <div>
+          <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Calificación</label>
+          <div class="flex items-center gap-1" role="group" aria-label="Calificación con estrellas">
+            @for (star of starRange; track star) {
+              <button type="button" (click)="setReviewRating(star)"
+                class="p-0.5 transition-transform hover:scale-110 focus:outline-none"
+                [attr.aria-label]="star + ' estrella' + (star !== 1 ? 's' : '')">
+                <svg class="w-8 h-8 transition-colors"
+                     [class.text-amber-400]="star <= (reviewForm.value.rating ?? 0)"
+                     [class.text-slate-200]="star > (reviewForm.value.rating ?? 0)"
+                     viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z"/>
+                </svg>
+              </button>
+            }
+            <span class="ml-2 text-sm font-semibold text-slate-700 tabular-nums">
+              {{ reviewForm.value.rating }}/5
+            </span>
+          </div>
+        </div>
+
+        <!-- Comentario -->
+        <div>
+          <label for="review-comment" class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">
+            Comentario <span class="normal-case font-normal text-slate-400">(opcional)</span>
+          </label>
+          <textarea id="review-comment" formControlName="comment" rows="3"
+            class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent bg-slate-50 focus:bg-white resize-none transition-colors"
+            placeholder="¿Qué te pareció este lugar?"></textarea>
+        </div>
+
+        @if (errorMsg) {
+          <p class="text-red-500 text-xs flex items-center gap-1.5" role="alert">
+            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+            </svg>
+            {{ errorMsg }}
+          </p>
+        }
+
+        <div class="flex gap-2 pt-0.5">
+          <button type="button" (click)="closeReviewModal()"
+            class="flex-1 py-2.5 rounded-xl text-sm text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="reviewForm.invalid"
+            class="flex-1 py-2.5 rounded-xl text-sm font-medium bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors">
+            Publicar reseña
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Modal guardar zona dibujada -->
+@if (showZoneModal()) {
+  <div class="fixed inset-0 z-[1000] bg-black/20 backdrop-blur-md flex items-center justify-center p-4"
+       role="dialog" aria-modal="true" aria-label="Guardar zona dibujada">
+    <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-sm p-6">
+
+      <div class="flex items-center gap-2.5 mb-5">
+        <div class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
+          </svg>
+        </div>
+        <h2 class="font-semibold text-base text-slate-900">Guardar dibujo</h2>
+      </div>
+
+      <form [formGroup]="zoneForm" (ngSubmit)="saveZone()" class="space-y-3.5">
+        <div>
+          <label for="zone-name" class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">
+            Nombre <span class="text-red-400" aria-hidden="true">*</span>
+          </label>
+          <input id="zone-name" type="text" formControlName="name"
+            class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent bg-slate-50 focus:bg-white transition-colors"
+            placeholder="Zona histórica, Parque central..." aria-required="true"/>
+        </div>
+
+        <div>
+          <label for="zone-type" class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Tipo</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" (click)="zoneForm.patchValue({ type: 'polygon' })"
+              class="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm transition-colors"
+              [class.border-slate-900]="zoneForm.value.type === 'polygon'"
+              [class.bg-slate-900]="zoneForm.value.type === 'polygon'"
+              [class.text-white]="zoneForm.value.type === 'polygon'"
+              [class.border-slate-200]="zoneForm.value.type !== 'polygon'"
+              [class.text-slate-600]="zoneForm.value.type !== 'polygon'"
+              [class.hover:border-slate-400]="zoneForm.value.type !== 'polygon'">
+              <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z"/>
+              </svg>
+              Polígono
+            </button>
+            <button type="button" (click)="zoneForm.patchValue({ type: 'polyline' })"
+              class="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm transition-colors"
+              [class.border-slate-900]="zoneForm.value.type === 'polyline'"
+              [class.bg-slate-900]="zoneForm.value.type === 'polyline'"
+              [class.text-white]="zoneForm.value.type === 'polyline'"
+              [class.border-slate-200]="zoneForm.value.type !== 'polyline'"
+              [class.text-slate-600]="zoneForm.value.type !== 'polyline'"
+              [class.hover:border-slate-400]="zoneForm.value.type !== 'polyline'">
+              <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"/>
+              </svg>
+              Ruta
+            </button>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-slate-400 flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+          </svg>
+          {{ drawPointCount() }} coordenadas capturadas
+        </p>
+
+        <div class="flex gap-2 pt-0.5">
+          <button type="button" (click)="closeZoneModal()"
+            class="flex-1 py-2.5 rounded-xl text-sm text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="zoneForm.invalid"
+            class="flex-1 py-2.5 rounded-xl text-sm font-medium bg-slate-900 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors">
+            Guardar
+          </button>
         </div>
       </form>
     </div>

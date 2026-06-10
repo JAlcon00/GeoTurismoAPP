@@ -1,82 +1,148 @@
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-lg w-full max-w-md p-8">
-    <div class="text-center mb-8">
-      <div class="text-4xl mb-2">🗺️</div>
-      <h1 class="text-2xl font-bold text-gray-800">GeoTurismo</h1>
-      <p class="text-gray-500 text-sm mt-1">Crea tu cuenta</p>
+<div class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 w-full max-w-sm p-8">
+
+    <!-- Logo -->
+    <div class="flex flex-col items-center mb-8">
+      <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-slate-900 mb-4">
+        <svg viewBox="0 0 28 28" width="22" height="22" fill="none" stroke="white"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="14" cy="14" r="9"/>
+          <line x1="14" y1="1" x2="14" y2="6"/>
+          <line x1="14" y1="22" x2="14" y2="27"/>
+          <line x1="1" y1="14" x2="6" y2="14"/>
+          <line x1="22" y1="14" x2="27" y2="14"/>
+          <circle cx="14" cy="14" r="2.5" fill="white" stroke="none"/>
+        </svg>
+      </div>
+      <h1 class="text-xl font-semibold text-slate-900 tracking-tight">GeoTurismo</h1>
+      <p class="text-slate-500 text-sm mt-1">Crea tu cuenta</p>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4" novalidate>
+
+      <!-- Nombre -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
-        <input
-          type="text"
-          formControlName="name"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Juan Pérez"
-        />
+        <label for="name" class="block text-sm font-medium text-slate-700 mb-1.5">Nombre completo</label>
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+          </svg>
+          <input id="name" type="text" formControlName="name" autocomplete="name"
+            class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-shadow"
+            placeholder="Juan Pérez"
+            [attr.aria-invalid]="form.get('name')?.invalid && form.get('name')?.touched"/>
+        </div>
         @if (form.get('name')?.invalid && form.get('name')?.touched) {
-          <p class="text-red-500 text-xs mt-1">El nombre debe tener al menos 2 caracteres</p>
+          <p class="text-red-500 text-xs mt-1.5 flex items-center gap-1" role="alert">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+            </svg>
+            El nombre debe tener al menos 2 caracteres
+          </p>
         }
       </div>
 
+      <!-- Email -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
-        <input
-          type="email"
-          formControlName="email"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="usuario@ejemplo.com"
-        />
+        <label for="email" class="block text-sm font-medium text-slate-700 mb-1.5">Correo electrónico</label>
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/>
+          </svg>
+          <input id="email" type="email" formControlName="email" autocomplete="email"
+            class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-shadow"
+            placeholder="usuario@ejemplo.com"
+            [attr.aria-invalid]="form.get('email')?.invalid && form.get('email')?.touched"/>
+        </div>
         @if (form.get('email')?.invalid && form.get('email')?.touched) {
-          <p class="text-red-500 text-xs mt-1">Ingresa un correo válido</p>
+          <p class="text-red-500 text-xs mt-1.5 flex items-center gap-1" role="alert">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+            </svg>
+            Ingresa un correo válido
+          </p>
         }
       </div>
 
+      <!-- Contraseña -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-        <input
-          type="password"
-          formControlName="password"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Mínimo 6 caracteres"
-        />
+        <label for="password" class="block text-sm font-medium text-slate-700 mb-1.5">Contraseña</label>
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+          </svg>
+          <input id="password" type="password" formControlName="password" autocomplete="new-password"
+            class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-shadow"
+            placeholder="Mínimo 6 caracteres"
+            [attr.aria-invalid]="form.get('password')?.invalid && form.get('password')?.touched"/>
+        </div>
         @if (form.get('password')?.invalid && form.get('password')?.touched) {
-          <p class="text-red-500 text-xs mt-1">La contraseña debe tener al menos 6 caracteres</p>
+          <p class="text-red-500 text-xs mt-1.5 flex items-center gap-1" role="alert">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+            </svg>
+            La contraseña debe tener al menos 6 caracteres
+          </p>
         }
       </div>
 
+      <!-- Confirmar contraseña -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
-        <input
-          type="password"
-          formControlName="confirmPassword"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Repite tu contraseña"
-        />
+        <label for="confirmPassword" class="block text-sm font-medium text-slate-700 mb-1.5">Confirmar contraseña</label>
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/>
+          </svg>
+          <input id="confirmPassword" type="password" formControlName="confirmPassword" autocomplete="new-password"
+            class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-shadow"
+            placeholder="Repite tu contraseña"
+            [attr.aria-invalid]="form.errors?.['mismatch'] && form.get('confirmPassword')?.touched"/>
+        </div>
         @if (form.errors?.['mismatch'] && form.get('confirmPassword')?.touched) {
-          <p class="text-red-500 text-xs mt-1">Las contraseñas no coinciden</p>
+          <p class="text-red-500 text-xs mt-1.5 flex items-center gap-1" role="alert">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+            </svg>
+            Las contraseñas no coinciden
+          </p>
         }
       </div>
 
       @if (errorMsg) {
-        <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
+        <div class="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2.5" role="alert">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+          </svg>
           {{ errorMsg }}
         </div>
       }
 
-      <button
-        type="submit"
-        [disabled]="loading || form.invalid"
-        class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2 rounded-lg transition-colors text-sm"
-      >
-        {{ loading ? 'Registrando...' : 'Crear cuenta' }}
+      <button type="submit" [disabled]="loading || form.invalid"
+        class="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition-colors text-sm mt-2"
+        aria-live="polite">
+        @if (loading) {
+          <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" d="M12 3a9 9 0 1 0 9 9"/>
+          </svg>
+          Registrando...
+        } @else {
+          Crear cuenta
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+          </svg>
+        }
       </button>
+
     </form>
 
-    <p class="text-center text-sm text-gray-500 mt-6">
+    <p class="text-center text-sm text-slate-500 mt-6">
       ¿Ya tienes cuenta?
-      <a routerLink="/auth/login" class="text-blue-600 hover:underline font-medium">Inicia sesión</a>
+      <a routerLink="/auth/login" class="text-slate-900 font-medium hover:underline">Inicia sesión</a>
     </p>
+
   </div>
 </div>

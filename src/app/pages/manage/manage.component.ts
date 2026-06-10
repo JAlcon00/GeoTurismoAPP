@@ -5,8 +5,10 @@ import { NavbarComponent } from '../../shared/components/navbar/navbar.component
 import { CategoryService } from '../../core/services/category.service';
 import { ReviewService } from '../../core/services/review.service';
 import { LocationService } from '../../core/services/location.service';
+import { ZoneService } from '../../core/services/zone.service';
 import { Category, Location } from '../../shared/models/location.model';
 import { Review } from '../../shared/models/review.model';
+import { Zone } from '../../shared/models/zone.model';
 
 @Component({
   selector: 'app-manage',
@@ -15,7 +17,7 @@ import { Review } from '../../shared/models/review.model';
   templateUrl: './manage.component.html',
 })
 export class ManageComponent implements OnInit {
-  activeTab: 'categories' | 'reviews' = 'categories';
+  activeTab: 'categories' | 'reviews' | 'zones' = 'categories';
 
   readonly iconOptions = [
     '📍','🏛️','🏟️','🏰','🏯','⛪','🕌','🕍','⛩️',
@@ -34,6 +36,7 @@ export class ManageComponent implements OnInit {
   categories: Category[] = [];
   reviews: Review[] = [];
   locations: Location[] = [];
+  zones: Zone[] = [];
 
   editingCategory = signal<Category | null>(null);
   editingReview = signal<Review | null>(null);
@@ -47,6 +50,7 @@ export class ManageComponent implements OnInit {
   private categoryService = inject(CategoryService);
   private reviewService = inject(ReviewService);
   private locationService = inject(LocationService);
+  private zoneService = inject(ZoneService);
 
   categoryForm = this.fb.group({
     name: ['', Validators.required],
@@ -64,6 +68,7 @@ export class ManageComponent implements OnInit {
     this.categoryService.loadAll().subscribe((res) => (this.categories = res.data));
     this.reviewService.loadAll().subscribe((res) => (this.reviews = res.data));
     this.locationService.loadAll().subscribe((res) => (this.locations = res.data));
+    this.zoneService.getAll().subscribe((res) => (this.zones = res.data));
 
     this.categoryService.categories$.subscribe((c) => (this.categories = c));
     this.reviewService.reviews$.subscribe((r) => (this.reviews = r));
@@ -153,6 +158,23 @@ export class ManageComponent implements OnInit {
     if (!rev.location) return null;
     const loc = this.locations.find((l) => l._id === rev.location!._id);
     return (loc?.category as Category) ?? null;
+  }
+
+  // ── Zonas ─────────────────────────────────────────────────────────────────
+
+  deleteZone(id: string): void {
+    if (!confirm('¿Eliminar esta zona del mapa?')) return;
+    this.zoneService.delete(id).subscribe({
+      next: () => {
+        this.zones = this.zones.filter((z) => z._id !== id);
+        this.flash('Zona eliminada');
+      },
+      error: (err) => (this.errorMsg = err.error?.message ?? 'Error'),
+    });
+  }
+
+  zoneTypeLabel(type: string): string {
+    return type === 'polygon' ? 'Polígono' : 'Línea';
   }
 
   private flash(msg: string): void {
