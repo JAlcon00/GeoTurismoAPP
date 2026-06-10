@@ -12,5 +12,6 @@ export interface Location {
   latitude: number;
   longitude: number;
   category?: Category;
+  createdBy?: { _id: string; name: string };
   createdAt: string;
 }

@@ -21,22 +21,22 @@ export class AuthService {
   login(email: string, password: string): Observable<{ success: boolean; data: AuthResponse }> {
     return this.http.post<{ success: boolean; data: AuthResponse }>(`${this.apiUrl}/login`, { email, password }).pipe(
       tap((res) => {
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
+        sessionStorage.setItem('token', res.data.token);
+        sessionStorage.setItem('user', JSON.stringify(res.data.user));
         this.currentUser.set(res.data.user);
       })
     );
   }
 
   logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     this.currentUser.set(null);
     this.router.navigate(['/auth/login']);
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    return sessionStorage.getItem('token');
   }
 
   isAuthenticated(): boolean {
@@ -44,7 +44,7 @@ export class AuthService {
   }
 
   private loadUserFromStorage(): User | null {
-    const raw = localStorage.getItem('user');
+    const raw = sessionStorage.getItem('user');
     return raw ? (JSON.parse(raw) as User) : null;
   }
 }

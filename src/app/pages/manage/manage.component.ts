@@ -6,6 +6,7 @@ import { CategoryService } from '../../core/services/category.service';
 import { ReviewService } from '../../core/services/review.service';
 import { LocationService } from '../../core/services/location.service';
 import { ZoneService } from '../../core/services/zone.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Category, Location } from '../../shared/models/location.model';
 import { Review } from '../../shared/models/review.model';
 import { Zone } from '../../shared/models/zone.model';
@@ -46,6 +47,7 @@ export class ManageComponent implements OnInit {
   successMsg = '';
   errorMsg = '';
 
+  auth = inject(AuthService);
   private fb = inject(FormBuilder);
   private categoryService = inject(CategoryService);
   private reviewService = inject(ReviewService);

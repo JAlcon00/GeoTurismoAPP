@@ -6,6 +6,7 @@ import { LocationService } from '../../core/services/location.service';
 import { ZoneService } from '../../core/services/zone.service';
 import { CategoryService } from '../../core/services/category.service';
 import { ReviewService } from '../../core/services/review.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Location, Category } from '../../shared/models/location.model';
 import { Zone } from '../../shared/models/zone.model';
 import { Subscription } from 'rxjs';
@@ -60,6 +61,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private waypointDots: L.CircleMarker[] = [];
   private isRouting = false;
 
+  auth = inject(AuthService);
   private locationService = inject(LocationService);
   private zoneService = inject(ZoneService);
   private categoryService = inject(CategoryService);

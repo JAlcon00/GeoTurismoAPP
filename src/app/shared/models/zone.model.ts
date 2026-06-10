@@ -5,5 +5,6 @@ export interface Zone {
   name: string;
   type: ZoneType;
   coordinates: [number, number][];
+  createdBy?: { _id: string; name: string };
   createdAt: string;
 }
