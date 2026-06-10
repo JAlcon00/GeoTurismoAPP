@@ -26,18 +26,25 @@
        role="application" aria-label="Mapa interactivo de ubicaciones turísticas en León, Guanajuato"></div>
 
   <!-- ─── Panel flotante izquierdo ─── -->
-  <div class="absolute top-4 left-4 bottom-4 z-[400] flex items-start gap-2 pointer-events-none">
+  <div class="absolute top-0 left-0 bottom-0 z-[400] flex items-start gap-2 pointer-events-none
+              sm:top-4 sm:left-4 sm:bottom-4">
 
-    <!-- Collapsible inner -->
-    <div class="flex flex-col h-full gap-2.5 overflow-hidden transition-all duration-300 ease-in-out"
-         [class.w-80]="panelOpen()"
-         [class.w-0]="!panelOpen()"
+    <!-- Backdrop mobile: cubre el mapa cuando el panel está abierto -->
+    @if (panelOpen()) {
+      <div class="fixed inset-0 bg-black/40 sm:hidden pointer-events-auto"
+           (click)="togglePanel()" aria-hidden="true"></div>
+    }
+
+    <!-- Collapsible inner — usa min() para ser full en móvil, 320px en desktop -->
+    <div class="flex flex-col h-full gap-2.5 overflow-hidden transition-all duration-300 ease-in-out
+                pt-4 pb-4 pl-4 sm:pt-0 sm:pb-0 sm:pl-0"
+         [style.width]="panelOpen() ? 'min(320px, calc(100vw - 3rem))' : '0'"
          [class.opacity-100]="panelOpen()"
          [class.opacity-0]="!panelOpen()"
          [class.pointer-events-none]="!panelOpen()">
 
     <!-- Buscador -->
-    <div class="w-80 bg-white/75 backdrop-blur-xl rounded-2xl shadow-2xl ring-1 ring-white/60 pointer-events-auto">
+    <div class="w-full bg-white/75 backdrop-blur-xl rounded-2xl shadow-2xl ring-1 ring-white/60 pointer-events-auto">
       <div class="flex items-center gap-3 px-4 py-3">
         <svg class="w-4 h-4 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
@@ -59,7 +66,7 @@
     </div>
 
     <!-- Panel con tabs -->
-    <div class="w-80 bg-white/75 backdrop-blur-xl rounded-2xl shadow-2xl ring-1 ring-white/60 flex-1 overflow-hidden flex flex-col pointer-events-auto">
+    <div class="w-full bg-white/75 backdrop-blur-xl rounded-2xl shadow-2xl ring-1 ring-white/60 flex-1 overflow-hidden flex flex-col pointer-events-auto">
 
       <!-- Tab bar -->
       <div class="flex items-stretch px-2 pt-2 border-b border-slate-100 shrink-0" role="tablist">
@@ -313,7 +320,7 @@
 
     <!-- Botón toggle -->
     <button (click)="togglePanel()"
-      class="pointer-events-auto mt-2 w-8 h-8 flex items-center justify-center rounded-full bg-white/75 backdrop-blur-xl shadow-xl ring-1 ring-white/60 hover:bg-white/95 transition-all shrink-0"
+      class="pointer-events-auto mt-4 sm:mt-2 w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-white/75 backdrop-blur-xl shadow-xl ring-1 ring-white/60 hover:bg-white/95 transition-all shrink-0"
       [attr.aria-label]="panelOpen() ? 'Contraer panel' : 'Expandir panel'">
       <svg class="w-4 h-4 text-slate-500 transition-transform duration-300"
            [class.-rotate-180]="!panelOpen()"
@@ -326,7 +333,7 @@
   <!-- FAB: Dibujar zona/ruta -->
   @if (!drawMode()) {
     <button (click)="startDraw()"
-      class="absolute bottom-6 right-6 z-[400] flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white text-sm font-medium pl-4 pr-5 py-3 rounded-full shadow-2xl ring-1 ring-black/10 transition-colors"
+      class="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-[400] flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white text-sm font-medium pl-4 pr-5 py-3 rounded-full shadow-2xl ring-1 ring-black/10 transition-colors"
       aria-label="Activar modo de dibujo de zona o ruta">
       <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
@@ -369,9 +376,9 @@
 
 <!-- Modal crear/editar ubicación -->
 @if (showModal()) {
-  <div class="fixed inset-0 z-[1000] bg-black/20 backdrop-blur-md flex items-center justify-center p-4"
+  <div class="fixed inset-0 z-[1000] bg-black/20 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
        role="dialog" aria-modal="true" [attr.aria-label]="editingLocation() ? 'Editar ubicación' : 'Nueva ubicación'">
-    <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-sm p-6">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl ring-1 ring-black/5 w-full sm:max-w-sm p-5 sm:p-6 max-h-[90vh] overflow-y-auto">
 
       <div class="flex items-center gap-2.5 mb-5">
         <div class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
@@ -439,9 +446,9 @@
 
 <!-- Modal nueva reseña -->
 @if (showReviewModal()) {
-  <div class="fixed inset-0 z-[1000] bg-black/20 backdrop-blur-md flex items-center justify-center p-4"
+  <div class="fixed inset-0 z-[1000] bg-black/20 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
        role="dialog" aria-modal="true" aria-label="Agregar reseña">
-    <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-sm p-6">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl ring-1 ring-black/5 w-full sm:max-w-sm p-5 sm:p-6 max-h-[90vh] overflow-y-auto">
 
       <!-- Header -->
       <div class="flex items-start gap-2.5 mb-5">
@@ -516,9 +523,9 @@
 
 <!-- Modal guardar zona dibujada -->
 @if (showZoneModal()) {
-  <div class="fixed inset-0 z-[1000] bg-black/20 backdrop-blur-md flex items-center justify-center p-4"
+  <div class="fixed inset-0 z-[1000] bg-black/20 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
        role="dialog" aria-modal="true" aria-label="Guardar zona dibujada">
-    <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 w-full max-w-sm p-6">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl ring-1 ring-black/5 w-full sm:max-w-sm p-5 sm:p-6 max-h-[90vh] overflow-y-auto">
 
       <div class="flex items-center gap-2.5 mb-5">
         <div class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
