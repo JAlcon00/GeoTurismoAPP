@@ -18,7 +18,7 @@ import { Zone } from '../../shared/models/zone.model';
   templateUrl: './manage.component.html',
 })
 export class ManageComponent implements OnInit {
-  activeTab: 'categories' | 'reviews' | 'zones' = 'categories';
+  activeTab: 'locations' | 'categories' | 'reviews' | 'zones' = 'locations';
 
   readonly iconOptions = [
     '📍','🏛️','🏟️','🏰','🏯','⛪','🕌','🕍','⛩️',
@@ -74,6 +74,7 @@ export class ManageComponent implements OnInit {
 
     this.categoryService.categories$.subscribe((c) => (this.categories = c));
     this.reviewService.reviews$.subscribe((r) => (this.reviews = r));
+    this.locationService.locations$.subscribe((l) => (this.locations = l));
   }
 
   // ── Categorías ────────────────────────────────────────────────────────────
